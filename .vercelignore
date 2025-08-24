@@ -1,0 +1,17 @@
+.yarn/*
+.yarnrc.yml
+.pnp.*
+node_modules/*
+!node_modules/.pnpm/*
+!node_modules/.pnpm/**/*
+.cache
+.DS_Store
+*.local
+*.log
+.npm
+.pnpm-debug.log
+.yarn-integrity
+.env*.local
+.vercel
+.next
+dist
