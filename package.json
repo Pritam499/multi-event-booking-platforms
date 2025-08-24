@@ -4,10 +4,20 @@
   "description": "A blank template to get started with Payload 3.0",
   "license": "MIT",
   "type": "module",
-    "scripts": {
+  "scripts": {
     "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev",
-    "build": "payload build && next build",
-    "start": "cross-env NODE_OPTIONS=--no-deprecation next start"
+    "devsafe": "rm -rf .next && cross-env NODE_OPTIONS=--no-deprecation next dev",
+    "build": "next build",
+    "build:safe": "pnpm run generate:types && npx tsc --noEmit && next build",
+    "build:vercel": "pnpm run generate:types && next build",
+    "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
+    "seed": "ts-node --esm src/seed.ts",
+    "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
+    "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
+    "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
+    "test": "pnpm run test:int && pnpm run test:e2e",
+    "test:int": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.mts",
+    "test:e2e": "cross-env NODE_OPTIONS=\"--no-deprecation --no-experimental-strip-types\" pnpm exec playwright test"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "3.53.0",

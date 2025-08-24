@@ -3,12 +3,15 @@ import { NextResponse } from 'next/server';
 import payload from 'payload';
 import { getUserFromAuth } from '@/lib/auth';
 
+// Use this signature for Next.js 15 route handlers
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> } // params is now a Promise
 ) {
   try {
-    const { id } = params;
+    const resolvedParams = await params; // Await the params
+    const { id } = resolvedParams;
+    
     const user = await getUserFromAuth(request);
 
     const notif = await payload.findByID({
@@ -16,6 +19,7 @@ export async function POST(
       id,
       depth: 0,
     });
+    
     if (!notif) {
       return NextResponse.json(
         { error: 'Notification not found' },
