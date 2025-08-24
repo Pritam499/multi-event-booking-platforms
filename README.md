@@ -1,67 +1,238 @@
-# Payload Blank Template
+# Multi-Tenant Event Booking System
 
-This template comes configured with the bare minimum to get started on anything you need.
+A comprehensive multi-tenant event booking backend built with Payload CMS, featuring waitlist management, real-time notifications, and organizer dashboards.
 
-## Quick start
+## 🚀 Features
 
-This template can be deployed directly from our Cloud hosting and it will setup MongoDB and cloud S3 object storage for media.
+- **Multi-Tenancy Support**: Complete data isolation between organizations
+- **Smart Waitlist System**: Automatic promotion when seats become available
+- **Real-time Notifications**: In-app alerts for all booking status changes
+- **Organizer Dashboard**: Analytics, progress indicators, and activity feeds
+- **Role-Based Access Control**: Attendee, Organizer, and Admin permissions
 
-## Quick Start - local setup
+## 📋 Prerequisites
 
-To spin up this template locally, follow these steps:
+- Node.js 18+ 
+- PostgreSQL database
+- pnpm package manager
 
-### Clone
+## 🛠️ Installation
 
-After you click the `Deploy` button above, you'll want to have standalone copy of this repo on your machine. If you've already cloned this repo, skip to [Development](#development).
+### 1. Clone the Repository
 
-### Development
+```bash
+git clone https://github.com/Pritam499/multi-event-booking-platforms.git
+cd multi-event-booking-platforms
+```
 
-1. First [clone the repo](#clone) if you have not done so already
-2. `cd my-project && cp .env.example .env` to copy the example environment variables. You'll need to add the `MONGODB_URI` from your Cloud project to your `.env` if you want to use S3 storage and the MongoDB database that was created for you.
+### 2. Environment Setup
 
-3. `pnpm install && pnpm dev` to install dependencies and start the dev server
-4. open `http://localhost:3000` to open the app in your browser
+Copy the environment example file and configure your settings:
 
-That's it! Changes made in `./src` will be reflected in your app. Follow the on-screen instructions to login and create your first admin user. Then check out [Production](#production) once you're ready to build and serve your app, and [Deployment](#deployment) when you're ready to go live.
+```bash
+cp .env.example .env
+```
 
-#### Docker (Optional)
+Edit the `.env` file with your configuration:
 
-If you prefer to use Docker for local development instead of a local MongoDB instance, the provided docker-compose.yml file can be used.
+```env
+# Database
+DATABASE_URL=postgresql://username:password@localhost:5432/your_database
 
-To do so, follow these steps:
+# Payload Configuration
+PAYLOAD_SECRET=your_very_long_random_secret_here
+PAYLOAD_PUBLIC_SERVER_URL=http://localhost:3000
 
-- Modify the `MONGODB_URI` in your `.env` file to `mongodb://127.0.0.1/<dbname>`
-- Modify the `docker-compose.yml` file's `MONGODB_URI` to match the above `<dbname>`
-- Run `docker-compose up` to start the database, optionally pass `-d` to run in the background.
+# Optional: Email configuration if needed
+SMTP_HOST=your_smtp_host
+SMTP_PORT=587
+SMTP_USER=your_smtp_user
+SMTP_PASS=your_smtp_password
+```
 
-## How it works
+### 3. Install Dependencies
 
-The Payload config is tailored specifically to the needs of most websites. It is pre-configured in the following ways:
+```bash
+pnpm install
+```
+
+### 4. Database Setup
+
+Run migrations to set up the database schema:
+
+```bash
+pnpm payload migrate
+```
+
+### 5. Seed the Database
+
+Populate the database with sample data including tenants, users, events, and bookings:
+
+```bash
+pnpx tsx src/seed.ts
+```
+
+This will create:
+- 2 tenants (Tenant Alpha and Tenant Beta)
+- 1 super admin user
+- 1 organizer and 3 attendees per tenant
+- 2 events per tenant with different capacities
+- Sample bookings with waitlist scenarios
+
+## 🎮 Usage
+
+### Development Mode
+
+Start the development server:
+
+```bash
+pnpm dev
+```
+
+Access the application at:
+- **Admin Panel**: http://localhost:3000/admin
+- **API**: http://localhost:3000/api
+
+### Production Build
+
+Create a production build:
+
+```bash
+pnpm run build
+```
+
+Start production server:
+
+```bash
+pnpm start
+```
+
+## 👥 Default Login Credentials
+
+After seeding, use these credentials to login:
+
+### Super Admin (Full Access)
+- **Email**: superadmin@example.com
+- **Password**: admin123
+
+### Tenant Alpha Admin
+- **Email**: admin@tenant-alpha.example
+- **Password**: password
+
+### Tenant Alpha Organizer
+- **Email**: organizer@tenant-alpha.example  
+- **Password**: password
+
+### Tenant Alpha Attendees
+- **Emails**: attendee1@tenant-alpha.example, attendee2@tenant-alpha.example, attendee3@tenant-alpha.example
+- **Password**: password
+
+*(Repeat for Tenant Beta)*
+
+## 📊 API Endpoints
+
+### Booking Management
+- `POST /api/book-event` - Create a new booking
+- `POST /api/cancel-booking` - Cancel a booking
+- `GET /api/my-bookings` - Get user's bookings
+- `GET /api/dashboard` - Organizer dashboard data
+
+### Notifications
+- `GET /api/my-notifications` - Get user notifications
+- `POST /api/notifications/:id/read` - Mark notification as read
+
+## 🏗️ Architecture
 
 ### Collections
+- **Tenants**: Organization isolation
+- **Users**: Role-based access control
+- **Events**: Event management with capacity limits
+- **Bookings**: Booking system with waitlist support
+- **Notifications**: Real-time user alerts
+- **BookingLogs**: Audit trail for all booking actions
 
-See the [Collections](https://payloadcms.com/docs/configuration/collections) docs for details on how to extend this functionality.
+### Key Features Implemented
+- ✅ Multi-tenancy with data isolation
+- ✅ Waitlist automation with promotion logic
+- ✅ Real-time notification system
+- ✅ Organizer dashboard with analytics
+- ✅ Comprehensive access control
+- ✅ Audit logging for all actions
 
-- #### Users (Authentication)
+## 🚀 Deployment
 
-  Users are auth-enabled collections that have access to the admin panel.
+### Vercel Deployment
 
-  For additional help, see the official [Auth Example](https://github.com/payloadcms/payload/tree/main/examples/auth) or the [Authentication](https://payloadcms.com/docs/authentication/overview#authentication-overview) docs.
+1. **Push to GitHub**
+2. **Connect repository to Vercel**
+3. **Set environment variables in Vercel dashboard**:
+   - `DATABASE_URL`
+   - `PAYLOAD_SECRET` 
+   - `PAYLOAD_PUBLIC_SERVER_URL`
 
-- #### Media
+4. **Deploy!** Vercel will automatically:
+   - Install dependencies with pnpm
+   - Generate Payload types
+   - Build the Next.js application
+   - Deploy to production
 
-  This is the uploads enabled collection. It features pre-configured sizes, focal point and manual resizing to help you manage your pictures.
+### Environment Variables for Production
 
-### Docker
+```env
+DATABASE_URL=your_production_postgres_url
+PAYLOAD_SECRET=your_production_secret
+PAYLOAD_PUBLIC_SERVER_URL=https://your-app.vercel.app
+```
 
-Alternatively, you can use [Docker](https://www.docker.com) to spin up this template locally. To do so, follow these steps:
+## 🔧 Development Scripts
 
-1. Follow [steps 1 and 2 from above](#development), the docker-compose file will automatically use the `.env` file in your project root
-1. Next run `docker-compose up`
-1. Follow [steps 4 and 5 from above](#development) to login and create your first admin user
+```bash
+# Development
+pnpm dev              # Start development server
+pnpm devsafe          # Clean build and start dev server
 
-That's it! The Docker instance will help you get up and running quickly while also standardizing the development environment across your teams.
+# Build & Production
+pnpm build            # Create production build
+pnpm start            # Start production server
 
-## Questions
+# Database & Types
+pnpm payload migrate  # Run database migrations
+pnpm generate:types   # Generate Payload TypeScript types
 
-If you have any issues or questions, reach out to us on [Discord](https://discord.com/invite/payload) or start a [GitHub discussion](https://github.com/payloadcms/payload/discussions).
+# Seeding
+pnpm run seed         # Seed database with sample data
+```
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+1. **Build Errors**: Clear cache and rebuild
+   ```bash
+   rm -rf .next node_modules/.cache
+   pnpm install
+   pnpm run build
+   ```
+
+2. **Database Connection**: Verify DATABASE_URL in .env
+
+3. **Permission Errors**: Run terminal as Administrator on Windows
+
+4. **Type Errors**: Regenerate types
+   ```bash
+   pnpm run generate:types
+   ```
+
+## 📝 License
+
+This project is created as part of WeFrameTech Backend Hiring Task.
+
+## 🆘 Support
+
+For issues related to this implementation, please refer to:
+- [Payload CMS Documentation](https://payloadcms.com/docs)
+- [Next.js Documentation](https://nextjs.org/docs)
+
+---
+
+**Note**: This is a demonstration project for evaluation purposes. Ensure all credentials are changed before production use.
