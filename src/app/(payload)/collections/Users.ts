@@ -1,4 +1,4 @@
-// // src/collections/Users.ts
+// // // src/collections/Users.ts
 // import type {
 //   CollectionConfig,
 //   CollectionBeforeChangeHook,
@@ -26,6 +26,7 @@
 
 //   return data;
 // };
+
 // /**
 //  * Access Rules
 //  */
@@ -90,12 +91,26 @@
 // /**
 //  * Collection
 //  */
+
 // export const Users: CollectionConfig = {
 //   slug: 'users',
-//   auth: true,
+//   auth: {
+//     // CRITICAL: Add these explicit auth settings
+//     useAPIKey: false,
+//     tokenExpiration: 7200,
+//     cookies: {
+//       secure: process.env.NODE_ENV === 'production',
+//       sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+//     },
+//     verify: false,
+//     maxLoginAttempts: 5,
+//     lockTime: 600000,
+//     // Remove the incorrect strategies configuration
+//   },
 //   admin: {
 //     useAsTitle: 'email',
 //     group: 'Core',
+//     defaultColumns: ['email', 'name', 'role'],
 //   },
 //   fields: [
 //     {
@@ -108,6 +123,10 @@
 //       type: 'email',
 //       required: true,
 //       unique: true,
+//       index: true, // CRITICAL: Add index for authentication
+//       admin: {
+//         position: 'sidebar',
+//       },
 //     },
 //     {
 //       name: 'role',
@@ -129,15 +148,7 @@
 //       admin: {
 //         condition: (data) => data?.role !== 'superAdmin',
 //       },
-//     },
-//     {
-//       name: 'tenantText',
-//       label: 'Tenant (SuperAdmin only)',
-//       type: 'text',
-//       required: false,
-//       admin: {
-//         condition: (data) => data?.role === 'superAdmin',
-//       },
+//       filterOptions: () => ({}),
 //     },
 //   ],
 //   access: {
@@ -150,14 +161,16 @@
 //     beforeChange: [attachTenantOnCreate],
 //   },
 //   timestamps: true,
-// }
+// };
 
 
+// src/collections/Users.ts
 import type {
   CollectionConfig,
   CollectionBeforeChangeHook,
   Access,
   Where,
+  PayloadRequest,
 } from 'payload'
 
 /**
@@ -166,16 +179,29 @@ import type {
 const attachTenantOnCreate: CollectionBeforeChangeHook = async ({ req, data, operation }) => {
   if (operation !== 'create') return data;
 
+  // If superAdmin creating, keep whatever is provided (superAdmin might create cross-tenant)
   if ((req.user as any)?.role === 'superAdmin') {
     return data;
   }
 
-  if (req.user?.tenant) {
-    return { ...data, tenant: req.user.tenant };
+  // Normalize tenant id from req.user
+  const userTenant = (req.user as any)?.tenant;
+  let tenantId = null;
+  if (typeof userTenant === 'string') tenantId = userTenant;
+  else if (userTenant && typeof userTenant === 'object') tenantId = userTenant.id ?? userTenant._id;
+
+  if (tenantId) {
+    return { ...data, tenant: tenantId };
   }
 
+  // If no tenant on user, require tenant provided in data
   if (!data?.tenant) {
     throw new Error('Tenant is required on signup or must be created via superAdmin.');
+  }
+
+  // ensure tenant is id not object:
+  if (typeof data.tenant === 'object') {
+    return { ...data, tenant: (data.tenant.id ?? data.tenant._id) };
   }
 
   return data;
@@ -185,22 +211,24 @@ const attachTenantOnCreate: CollectionBeforeChangeHook = async ({ req, data, ope
  * Access Rules
  */
 const usersReadAccess: Access = ({ req }) => {
-  if (!req.user) return true // allow read during first-register
+  // allow read for unauthenticated during first-register flows
+  if (!req.user) return true;
 
   if ((req.user as any).role === 'superAdmin') {
-    return true
+    return true;
   }
 
   if ((req.user as any).role === 'attendee') {
     return {
       and: [
         { id: { equals: req.user.id } } as Where,
-        { tenant: { equals: (req.user as any).tenant } } as Where,
+        { tenant: { equals: (req.user as any).tenant?.id ?? (req.user as any).tenant } } as Where,
       ],
     }
   }
 
-  return { tenant: { equals: (req.user as any).tenant } } as Where
+  // admin & organizer: tenant-scoped
+  return { tenant: { equals: (req.user as any).tenant?.id ?? (req.user as any).tenant } } as Where
 }
 
 const usersCreateAccess: Access = ({ req }) => {
@@ -210,8 +238,7 @@ const usersCreateAccess: Access = ({ req }) => {
   if (
     (req.user as any).role === 'admin' ||
     (req.user as any).role === 'organizer'
-  )
-    return true
+  ) return true
 
   return false
 }
@@ -225,19 +252,20 @@ const usersUpdateAccess: Access = ({ req }) => {
     return {
       and: [
         { id: { equals: req.user.id } } as Where,
-        { tenant: { equals: (req.user as any).tenant } } as Where,
+        { tenant: { equals: (req.user as any).tenant?.id ?? (req.user as any).tenant } } as Where,
       ],
     }
   }
 
-  return { tenant: { equals: (req.user as any).tenant } } as Where
+  // admin & organizer: tenant-scoped updates
+  return { tenant: { equals: (req.user as any).tenant?.id ?? (req.user as any).tenant } } as Where
 }
 
 const usersDeleteAccess: Access = ({ req }) => {
   if (!req.user) return false
   if ((req.user as any).role === 'superAdmin') return true
   if ((req.user as any).role === 'admin') {
-    return { tenant: { equals: (req.user as any).tenant } } as Where
+    return { tenant: { equals: (req.user as any).tenant?.id ?? (req.user as any).tenant } } as Where
   }
   return false
 }
@@ -245,89 +273,10 @@ const usersDeleteAccess: Access = ({ req }) => {
 /**
  * Collection
  */
-// export const Users: CollectionConfig = {
-//   slug: 'users',
-//   auth: {
-//     // Explicitly enable auth with proper settings
-//     useAPIKey: false,
-//     tokenExpiration: 7200, // 2 hours
-//     cookies: {
-//       secure: process.env.NODE_ENV === 'production',
-//       sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
-//     },
-
-//     // Add this to handle the email field properly
-//     verify: false, // Set to true if you want email verification
-//     maxLoginAttempts: 5,
-//     lockTime: 600000, // 10 minutes
-//   },
-//   admin: {
-//     useAsTitle: 'email',
-//     group: 'Core',
-//     // Make sure default columns are shown
-//     defaultColumns: ['email', 'name', 'role', 'tenant'],
-//   },
-//   fields: [
-//     {
-//       name: 'name',
-//       type: 'text',
-//       required: true,
-//     },
-//     {
-//       name: 'email',
-//       type: 'email',
-//       required: true,
-//       unique: true,
-//       // Important: This tells Payload to use this field for authentication
-//       index: true,
-//     },
-//     {
-//       name: 'role',
-//       type: 'select',
-//       options: [
-//         { label: 'Attendee', value: 'attendee' },
-//         { label: 'Organizer', value: 'organizer' },
-//         { label: 'Admin', value: 'admin' },
-//         { label: 'Super Admin', value: 'superAdmin' },
-//       ],
-//       defaultValue: 'attendee',
-//       required: true,
-//     },
-//     {
-//       name: 'tenant',
-//       type: 'relationship',
-//       relationTo: 'tenants',
-//       required: false,
-//       admin: {
-//         condition: (data) => data?.role !== 'superAdmin',
-//       },
-//     },
-//     {
-//       name: 'tenantText',
-//       label: 'Tenant (SuperAdmin only)',
-//       type: 'text',
-//       required: false,
-//       admin: {
-//         condition: (data) => data?.role === 'superAdmin',
-//       },
-//     },
-//   ],
-//   access: {
-//     read: usersReadAccess,
-//     create: usersCreateAccess,
-//     update: usersUpdateAccess,
-//     delete: usersDeleteAccess,
-//   },
-//   hooks: {
-//     beforeChange: [attachTenantOnCreate],
-//   },
-//   timestamps: true,
-// }
 
 export const Users: CollectionConfig = {
   slug: 'users',
   auth: {
-    // CRITICAL: Add these explicit auth settings
     useAPIKey: false,
     tokenExpiration: 7200,
     cookies: {
@@ -337,7 +286,6 @@ export const Users: CollectionConfig = {
     verify: false,
     maxLoginAttempts: 5,
     lockTime: 600000,
-    // Remove the incorrect strategies configuration
   },
   admin: {
     useAsTitle: 'email',
@@ -345,21 +293,8 @@ export const Users: CollectionConfig = {
     defaultColumns: ['email', 'name', 'role'],
   },
   fields: [
-    {
-      name: 'name',
-      type: 'text',
-      required: true,
-    },
-    {
-      name: 'email',
-      type: 'email',
-      required: true,
-      unique: true,
-      index: true, // CRITICAL: Add index for authentication
-      admin: {
-        position: 'sidebar',
-      },
-    },
+    { name: 'name', type: 'text', required: true },
+    { name: 'email', type: 'email', required: true, unique: true, index: true, admin: { position: 'sidebar' } },
     {
       name: 'role',
       type: 'select',
@@ -377,10 +312,7 @@ export const Users: CollectionConfig = {
       type: 'relationship',
       relationTo: 'tenants',
       required: false,
-      admin: {
-        condition: (data) => data?.role !== 'superAdmin',
-      },
-      filterOptions: () => ({}),
+      admin: { condition: (data) => data?.role !== 'superAdmin' },
     },
   ],
   access: {
