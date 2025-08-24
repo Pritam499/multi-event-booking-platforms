@@ -1,8 +1,0 @@
-{
-  "version": 2,
-  "env": {
-    "PAYLOAD_SECRET": "@payload_secret",
-    "DATABASE_URL": "@database_url",
-    "PAYLOAD_PUBLIC_SERVER_URL": "https://multi-event-tenant-booking.vercel.app"
-  }
-}
