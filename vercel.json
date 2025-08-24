@@ -1,36 +1,8 @@
 {
   "version": 3,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/admin/(.*)",
-      "dest": "/admin/$1"
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
-    }
-  ],
   "env": {
     "PAYLOAD_SECRET": "@payload_secret",
     "DATABASE_URL": "@database_url",
-    "PAYLOAD_PUBLIC_SERVER_URL": "https://multi-event-booking-platforms.vercel.app"
-  },
-  "buildCommand": "pnpm run build",
-  "outputDirectory": ".next",
-  "installCommand": "pnpm install",
-  "functions": {
-    "app/api/**/*.ts": {
-      "maxDuration": 30
-    }
+    "PAYLOAD_PUBLIC_SERVER_URL": "https://multi-tenant-event-booking.vercel.app"
   }
 }
